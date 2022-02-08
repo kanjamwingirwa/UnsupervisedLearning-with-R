@@ -1,0 +1,404 @@
+---
+title: "IP_Week_14"
+author: "Farnadis_Kanja"
+date: "2/5/2022"
+output: html_document
+Define the Question
+A Kenyan entrepreneur has created an online cryptography course and would want to advertise it on her blog. She currently targets audiences originating from various countries. In the past, she ran ads to advertise a related course on the same blog and collected data in the process. She would now like to employ your services as a Data Science Consultant to help her identify which individuals are most likely to click on her ads. We need to come up with a model which can predict the likelihood of an individual clicking on her advertisements
+
+Metric of Success
+To achieve this, we will need to look at the accuracy of our model. We aim for an accuracy of at least 96%
+
+The Context
+The dataset shows the various characteristics of people that had visited a blog. These characteristics are the country, the city, whether they clicked on the ad, time spent on the site, amount of internet used, as well as their gender.
+
+Experimental design taken
+We used the SVM model in supervised learning to approach this issue since this is a problem of classification. We used the R programning language 
+
+Appropriateness of the Available Data
+It was a bit difficult to determine the appropriateness of this data
+
+R Notebook
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Let's begin by installing dependencies and their libraries
+```{r}
+install.packages("data.table") # install package data.table to work with data tables
+library("data.table")
+```
+
+*Data Loading*
+```{r}
+install.packages("tidyverse") # install packages to work with data frame - extends into visualization
+library(tidyverse)
+```
+Let's now load our data accordingly and preview our data set
+```{r}
+advertising_dataset <- fread('http://bit.ly/IPAdvertisingData')
+head(advertising_dataset)
+```
+Let us look at the various properties of the dataset
+Let's look at the data types
+```{r}
+sapply(advertising_dataset,class)
+```
+Let's change timestamp to date
+```{r}
+advertising_dataset$Timestamp <-as.Date(advertising_dataset$Timestamp, format = "%Y-%m-%s-%h-%m -%s")
+#checking if the change has been implemented
+sapply(advertising_dataset,class)
+```
+
+
+```{r}
+str(advertising_dataset)
+```
+```{r}
+dim(advertising_dataset)
+#the dataset has 1000 observations(rows) and 10 variables(columns)
+```
+```{r}
+class(advertising_dataset)
+```
+*Data Cleaning*
+Let us now look for duplicated data throughout our dataset
+```{r}
+duplicated_rows <- advertising_dataset[duplicated(advertising_dataset),]
+duplicated_rows
+#no rows have been duplicated in our dataset
+```
+Let's look for null values in our dataset 
+```{r}
+is.na(advertising_dataset)
+```
+```{r}
+colSums(is.na(advertising_dataset))
+#no null values were found in our dataset 
+```
+Let's look for outliers
+```{r}
+boxplot(advertising_dataset$Age)
+#there are no outliers for the age variable 
+```
+outliers in the Area income
+```{r}
+boxplot(advertising_dataset$`Area Income`)
+#no outliers in this variable as wel 
+```
+Daily internet usage outliers
+```{r}
+boxplot(advertising_dataset$`Daily Internet Usage`)
+#No outliers in this case either. 
+```
+Daily time spent on the internet outliers
+```{r}
+boxplot(advertising_dataset$`Daily Time Spent on Site`)
+#no outliers in this case either 
+```
+*Univariate Analysis*
+First, Let's get a general feel of the data in terms of statistical analysis
+```{r}
+summary(advertising_dataset)
+```
+From the analysis above we can draw these conclusions;
+1. The median Daily time spent on site is 68, the min is 32 and the max is 91.43. The mean is 65
+2. The median age is 35, the min is 19 and the max is 61. THe mean age is 36yrs
+3. The median Area Income is 57012, the min is 13996, the max is 79485. The mean is 55000
+4. The median Daily internet usage is 183.1, the min is 104.8, the max is 270.The mean is 180.
+
+Let's Look at the mode for the different numerical variables
+```{r}
+getmode <- function(v) {
+  uniqv <- unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+}  
+```
+```{r}
+age.mode <- getmode(advertising_dataset$Age)
+age.mode
+```
+```{r}
+Time_on_site <- getmode(advertising_dataset$`Daily Time Spent on Site`)
+Time_on_site
+```
+```{r}
+Internet_usage <- getmode(advertising_dataset$`Daily Internet Usage`)
+Internet_usage
+```
+
+```{r}
+Area_Income <- getmode(advertising_dataset$`Area Income`)
+Area_Income
+```
+Measures of dispersion
+Variance of the daily internet usage
+```{r}
+daily_internet_usage_var <- var(advertising_dataset$`Daily Internet Usage`)
+daily_internet_usage_var
+#this shows that the dataset shows there is a huge difference from the mean
+```
+standard deviation of the daiy usage
+```{r}
+daily_internet_usage_sd <- sd(advertising_dataset$`Daily Internet Usage`)
+daily_internet_usage_sd
+```
+Variance of the daily time spent on the internet
+```{r}
+daily_internet_time_var <- var(advertising_dataset$`Daily Time Spent on Site`)
+daily_internet_time_var
+```
+standard deviation of the daily time spent on the internet
+```{r}
+daily_internet_time_sd <- sd(advertising_dataset$`Daily Time Spent on Site`)
+daily_internet_time_sd
+#there is not much of a difference from the mean
+```
+variance of age
+```{r}
+age_var <- var(advertising_dataset$Age)
+age_var
+```
+
+standard dev of age
+```{r}
+age_sd <- sd(advertising_dataset$Age)
+age_sd
+#there seems to not be a hige disparity in age from the mean 
+```
+variance of Area_Income
+```{r}
+Area_Income_var <- var(advertising_dataset$`Area Income`)
+Area_Income_var
+```
+Standard Deviation of area income
+```{r}
+area_income_sd <- sd(advertising_dataset$`Area Income`)
+area_income_sd
+#there is a huge gap in the area income
+```
+
+
+ 
+
+Let's begin with some basic histograms
+```{r}
+Time_on_site <- advertising_dataset$`Daily Time Spent on Site`
+hist(Time_on_site, col=c("blue"))
+#the data is skewed to the right
+
+```
+
+```{r}
+age <- advertising_dataset$`Age`
+hist(age, col=c("red"))
+#the data is skewed to the left
+```
+```{r}
+Area_Income <- advertising_dataset$`Area Income`
+hist(Area_Income, col=c("purple"))
+#data is skewed to the right
+```
+```{r}
+Internet_usage<- advertising_dataset$`Daily Internet Usage`
+hist(Internet_usage, col=c("yellow"))
+#the data is bimodal which means that it has two peaks 
+```
+```{r}
+male <- table(advertising_dataset$Male)
+```
+```{r}
+barplot(male, main="Distribution of Gender", col = c("blue","pink"),xlab="Gender")
+#there seems to be an almost equal distribution among the two genders with the males being slightly more.
+```
+Let's look at the cities
+```{r}
+require(dplyr)
+
+n_distinct(advertising_dataset$City)
+#there are 969 distinct cities in the dataset
+```
+```{r}
+k = advertising_dataset$City
+names(table(k))[table(k)==max(table(k))]
+#Lisamouth and Williamsport are the two most popular cities in the dataset
+```
+Let's look at Countries
+```{r}
+require(dplyr)
+
+n_distinct(advertising_dataset$Country)
+#there are 237 distinct countries in the dataset
+```
+```{r}
+country = advertising_dataset$Country
+names(table(country))[table(country)==max(table(country))]
+#Czech Republic and France are the two most popular countries in the dataset
+```
+
+```{r}
+#male <- table(advertising_dataset$Male)
+click <- table(advertising_dataset$'Clicked on Ad')
+
+
+```
+```{r}
+#barplot(male, main="Distribution of Gender", col = c("blue","pink"),xlab="Gender")
+barplot(click, main="Distribution of Adertisements Clicked", col=c("black","red"),xlab="Clicked.on.Ad")
+#there seems to be an equal number of those who clicked on ad vs those who did not
+#there are 500 unique values for each
+```
+Bivariate Analysis
+We shall begin by dropping the topic line for ad as it seems to serve no purpose. 
+
+```{r}
+df2 <- subset(advertising_dataset, select = c ('Daily Time Spent on Site', 'Age','Area Income', 'Daily Internet Usage','Male','Clicked on Ad'))
+head(df2)
+```
+Let's Look at Covariance 
+```{r}
+age <- df2$Age
+internet_usage <- df2$`Daily Internet Usage`
+cov(age, internet_usage)
+#there is a negative covariance between age and internet usage, thus the older on is, the less the internet usage
+```
+
+```{r}
+age <- df2$Age
+time_on_site <- df2$`Daily Time Spent on Site`
+cov(age, time_on_site)
+#there is a negative covariance between daily time spent on the internet and age. Therefore, the older one is the less time they are likely to spend on the site
+```
+```{r}
+internet_usage <- df2$`Daily Internet Usage`
+time_on_site <- df2$`Daily Time Spent on Site`
+cov(internet_usage, time_on_site)
+#As expected, there is a high covariance between internet usage and time spent on the site. Therefore, the more time one spends on the interent, the more likely they will spend time on the site
+```
+```{r}
+area_Income <- df2$`Area Income`
+time_on_site <- df2$`Daily Time Spent on Site`
+cov(area_Income, time_on_site)
+#there is a high positive relationship between the area income and the time spent on site. Perhaps, richer people have more time on their hands and thus can spend time on the site.
+```
+
+```{r}
+area_Income <- df2$`Area Income`
+daily_internet_usage <- df2$`Daily Internet Usage`
+cov(area_Income, daily_internet_usage)
+#just like above, there is a very high positive relationship between area income and the daily internet usage
+```
+For Correlation, let's use pearson's correlation coefficient
+```{r}
+mydata=cor(df2,method = c("pearson"))
+mydata
+#the variables that have a great covariance also have a great correlation. 
+```
+
+```{r}
+df3 <- subset(advertising_dataset, select = c ('Daily Time Spent on Site', 'Age','Area Income', 'Daily Internet Usage'))
+```
+
+
+```{r}
+install.packages("ggcorrplot")
+library(ggplot2)
+library(ggcorrplot)
+ggcorrplot(df3)
+```
+df <- dplyr::select_if(SaratogaHouses, is.numeric)
+```{r}
+df4 <- dplyr::select_if(df2, is.numeric)
+```
+```{r}
+r <- cor (df4, use = "complete.obs")
+round(r,2)
+```
+```{r}
+install.packages("ggcorrplot")
+library(ggplot2)
+library(ggcorrplot)
+ggcorrplot(r)
+```
+Supervised Learning with R Using R
+We begin by installing the caret package
+```{r}
+install.packages('caret')
+```
+```{r}
+library(caret)
+
+loaded_packages  <- library()$results[,1]
+
+# confirm caret is loaded
+"caret" %in% tolower(loaded_packages)
+```
+
+Load the caret library
+```{r}
+library(caret)
+```
+
+
+
+Let's preview the dataset we will be modelling
+```{r}
+head(df2)
+```
+Let's change the column name
+```{r}
+# get column names
+colnames(df2)
+```
+
+```{r}
+names(df2)[names(df2) == "Clicked on Ad"] <- "clicked"
+names(df2)[names(df2) == "Area Income"] <- "area_income"
+names(df2)[names(df2) == "Daily Time Spent on Site"] <- "daily_time_spent_on_site"
+names(df2)[names(df2) == "Daily Internet Usage"] <- "daily_internet_usage"
+df2
+```
+
+Let's split our data into test and train 
+```{r}
+intrain <- createDataPartition(y = df2$clicked, p =0.7, list = FALSE)
+train <- df2[intrain,]
+test <- df2[-intrain,]
+```
+Let's check the dimensions of our training df and testing df
+```{r}
+dim(train);
+dim(test);
+```
+Since the outcome variable is either 0 or 1, we need to change it into a categorical variable
+```{r}
+train[["clicked"]] = factor(train[["clicked"]])
+```
+Before training the model, we need to control all the computational overheads
+```{r}
+trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+```
+```{r}
+svm_Linear <- train(
+   clicked~., data = train, method ="svmLinear",
+   trControl = trctrl,
+   preProcess = c("center", "scale"),
+   tuneLength = 5)
+```
+```{r}
+svm_Linear
+```
+Let's Predict the results
+```{r}
+test_pred <- predict(svm_Linear , newdata = test)
+test_pred
+```
+Let us now check for the accuracy of our model 
+```{r}
+confusionMatrix(table(test_pred, test$clicked))
+confusionMatrix
+```
+The model is 96% accurate
+
+
+

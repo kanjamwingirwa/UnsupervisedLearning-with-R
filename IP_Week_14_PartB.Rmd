@@ -1,0 +1,360 @@
+---
+title: "IP_Week_14_PartB"
+author: "Farnadis_Kanja"
+date: "2/5/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Let's begin by installing dependencies and their libraries
+```{r}
+install.packages("data.table") # install package data.table to work with data tables
+library("data.table")
+```
+
+```{r}
+install.packages("tidyverse") # install packages to work with data frame - extends into visualization
+library(tidyverse)
+```
+Let's load the dataset and preview it
+```{r}
+online_shoppers <- fread('http://bit.ly/EcommerceCustomersDataset')
+head(online_shoppers)
+```
+Let us look at the various properties of the dataset
+Let's look at the data types
+```{r}
+sapply(online_shoppers,class)
+```
+To get a better understanding of the data
+```{r}
+str(online_shoppers)
+```
+To get dimensions of our dataset
+```{r}
+dim(online_shoppers)
+#the dataset has 12330 observations(rows) and 18 variables(columns)
+```
+```{r}
+class(online_shoppers)
+```
+Data Cleaning
+Let's begin by checking for null values in our dataset
+```{r}
+is.na(online_shoppers)
+```
+Let's check for null values column by column
+```{r}
+colSums(is.na(online_shoppers))
+```
+Let's drop all the null values
+```{r}
+library(dplyr)
+online_shoppers_new <-online_shoppers %>%
+na.omit()		
+dim(online_shoppers_new)
+#our new dataset has 12316 observations and 18 variables which means it has not been affected that much.
+
+```  
+Let's look at duplicates
+```{r}
+duplicated_rows <- online_shoppers_new[duplicated(online_shoppers_new),]
+duplicated_rows
+```
+We need to eliminate the duplicated rows
+```{r}
+new_df <- online_shoppers_new[!duplicated(online_shoppers_new), ]
+head(new_df)
+```
+
+```{r}
+sapply(new_df,class)
+```
+
+Let's check the dimensions of the our new dataset
+```{r}
+dim(new_df)
+#our new dataset now has 12199 observations and 18 variables
+```
+look at our new dataset
+```{r}
+head(new_df)
+```
+
+
+We shall only check outliers for three columns as they are the only numeric ones
+```{r}
+df3 <- subset(new_df, select = c ('ProductRelated_Duration', 'BounceRates', 'ExitRates', 'Administrative', 'ProductRelated', 'Administrative_Duration', 'Informational', 'Informational_Duration', 'PageValues', 'SpecialDay'))
+
+```
+
+```{r}
+names(df3)[names(df3) == "ProductRelated_Duration"] <- "prod_dur"
+names(df3)[names(df3) == "Administrative"] <- "admin"
+names(df3)[names(df3) == "Administrative_Duration"] <- "admin_dur"
+names(df3)[names(df3) == "Informational_Duration"] <- "info_dur"
+
+```
+
+
+```{r}
+boxplot(df3, col = rainbow(ncol(df3)))
+#product related information has a few outliers which we will not eliminate since it could have an impact on the decision the shopper makes
+
+```
+Univariate Analysis
+let's look at the summary statistics of the dataset. We shall use the subset(df2) since the rest are not numerical values
+```{r}
+summary(df3)
+
+```
+The following conclusions can be made at this point;
+The mean of product related duration is 1207.5 while the median is 609.5 
+The mean of bounce rates is 0.02 and the median is 0.003(rounded off)
+The mean of the exit rates stands at 0.04 abd the median is not too far off at 0.03(rounded off)
+The mean of ProductRelated is 32 while the median is 18
+The mean of administrative duration is 81.68 and the median is 9
+The mean of special day is 0.06  while the median is 0
+The mean of informational is 0.5 but the media is 0
+The mean of informational duration is 34.84 but the median is 0
+Let's determine the mode
+```{r}
+getmode <- function(v) {
+  uniqv <- unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+```
+Bounce Rate Mode
+```{r}
+bounce_rate_mode<- getmode(df3$BounceRates)
+bounce_rate_mode
+#people were not leaving the site, that's interesting. 
+```
+Product Related Duration
+```{r}
+Product_related_mode<- getmode(df3$prod_dur)
+Product_related_mode
+```
+Exit Rates
+```{r}
+ExitRatesMode<- getmode(df3$ExitRates)
+ExitRatesMode
+```
+Admin
+```{r}
+Administrative_mode<- getmode(df3$admin)
+Administrative_mode
+```
+Product Related
+```{r}
+Prod_related_mode<- getmode(df3$ProductRelated)
+Prod_related_mode
+```
+The Standard deviations for all the numeric variables 
+```{r}
+library(dplyr)
+df3 %>% summarise_if(is.numeric, sd)
+#many of the variables have very huge standard deviations signifying large movements from the mean 
+
+```
+The Variance for all the numeric variables
+```{r}
+library(dplyr)
+df3 %>% summarise_if(is.numeric, var)
+```
+Let's look at the categorical data
+Region
+```{r}
+require(dplyr)
+
+n_distinct(new_df$Region)
+#there are 9 distinct regions in the dataset
+```
+```{r}
+region <- table(new_df$Region)
+barplot(region, main="Distribution of Regions", col=c(rainbow),xlab="Regions")
+#1 is the most popular region in the dataset
+```
+
+```{r}
+browser <- table(new_df$Browser)
+barplot(browser, main="Distribution of Browsers", col=c(rainbow),xlab="Browsers")
+#2 is the most preferred browser
+```
+
+```{r}
+traffictype <- table(new_df$TrafficType)
+barplot(traffictype, main="Distribution of Type of Traffic", col=c(rainbow),xlab="Type of Traffic")
+#2 is the most most popular type of traffic
+```
+
+
+```{r}
+visitorType <- table(new_df$VisitorType)
+barplot(visitorType, main="Distribution of Type of Visitor", col=c(rainbow),xlab="Type of Visitor")
+#A returning visitor is the most popuar visitor
+```
+
+
+```{r}
+weekend_or_not <- table(new_df$Weekend)
+barplot(weekend_or_not, main="Weeked or Not?", col=c(rainbow),xlab="Weekend?")
+#most people were on the website during the week day
+```
+
+```{r}
+month_of_year <- table(new_df$Month)
+barplot(month_of_year, main="Months of the Year", col=c(rainbow),xlab="Month")
+#may is the most popular month in the data set
+```
+
+```{r}
+Revenue <- table(new_df$Revenue)
+barplot(month_of_year, main="Did the Bring Revenue", col=c(rainbow),xlab="Revenue")
+#most visitors did not buy
+```
+Bivariate Analysis
+Let's llook at the relationships 
+```{r}
+library(ggplot2)
+
+ggplot(new_df, aes(x = Region, fill = Revenue)) + 
+  geom_bar()
+#region one brought in the most revenuerevenue
+```
+
+```{r}
+ggplot(new_df, aes(x = Browser, fill = Revenue)) + 
+  geom_bar()
+```
+
+```{r}
+ggplot(new_df, aes(x = VisitorType, fill = Revenue)) + 
+  geom_bar()
+```
+
+```{r}
+ggplot(new_df, aes(x = Month, fill = Revenue)) + 
+  geom_bar()
+#while may was had the highest number of vivstors, Dec had the most revenue
+```
+
+```{r}
+ggplot(new_df, aes(x = Weekend, fill = Revenue)) + 
+  geom_bar()
+```
+Let's Look at the correlation matrix to determine the relationship of numerical values with each other
+```{r}
+mydata=cor(df3,method = c("pearson"))
+mydata
+```
+
+```{r}
+df4 <- dplyr::select_if(new_df, is.numeric)
+```
+
+```{r}
+r <- cor (df4, use = "complete.obs")
+round(r,2)
+```
+
+```{r}
+install.packages("ggcorrplot")
+library(ggplot2)
+library(ggcorrplot)
+ggcorrplot(r)
+#the correlations are generally week 
+```
+Unsupervised Learning using K means Clustering 
+Remove Class Attribute
+```{r}
+shopper <- new_df[, c(1,2,3,4,5,6,7,8,9,18)]
+shopper.class <- new_df[,"Revenue"]
+head(shopper)
+```
+Let's Preview the class column
+```{r}
+head(shopper.class)
+```
+Normalize each all the numeric variables
+We first define the min/max normalization function
+```{r}
+min_max_norm <- function(x) {
+    (x - min(x)) / (max(x) - min(x))
+  }
+```
+
+```{r}
+online <- as.data.frame(lapply(shopper[1:8], min_max_norm))
+```
+Let's apply the kmeans algorithm
+
+```{r}
+online[is.na(online)] <- 0
+
+```
+
+```{r}
+#km_cluster <- kmeans(na.omit(MyData), 3)
+clusters <- kmeans(online,3)
+clusters
+```
+
+
+Let's preview the number of records in each cluster
+```{r}
+clusters$size
+```
+Let's get the cluster centre datapoint calue
+```{r}
+clusters$centers
+```
+Let's get the cluster vector which shows the cluster where each record falls
+```{r}
+clusters$cluster
+```
+Visualizing the cluster results
+```{r}
+par(mfrow = c(1,2), mar = c(5,4,2,2))
+```
+
+```{r}
+plot(shopper[c(1,2,3,4,5)], col = clusters$cluster)
+```
+
+```{r}
+plot(shopper[c(6,7,8,9)], col = clusters$cluster)
+```
+None of them seem to have that much of an impact.
+
+
+Hierarchical Clustering
+```{r}
+shopper <- new_df[, c(1,2,3,4,5,6,7,8,9,18)]
+shopper
+```
+```{r}
+shopper <- new_df[, c(1,2,3,4,5,6,7,8,9,18)]
+```
+
+```{r}
+df <- scale(shopper)
+```
+Lets commpute the Euclidean distance
+```{r}
+d <- dist(df, method = 'euclidean')
+```
+We then apply the Ward's method for hierarchial clustering
+```{r}
+res.hc <- hclust(d, method = 'ward.D2' )
+```
+Let's plot the dendrogram
+```{r}
+plot(res.hc, cex =0.6, hang= -1)
+```
+
+
+
+
